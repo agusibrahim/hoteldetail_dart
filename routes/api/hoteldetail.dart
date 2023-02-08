@@ -16,7 +16,7 @@ Future<Response> onRequest(RequestContext context) async {
     return Response.json(body: {"success": false, "msg": "required parameter: city"});
   }
   var hashid =
-      '${"${context.request.uri.queryParameters['hotel']}-${context.request.uri.queryParameters['city']}-${context.request.uri.queryParameters['addr'] ?? ''}".toLowerCase().trim().hashCode}';
+      '${"${context.request.uri.queryParameters['hotel']}-${context.request.uri.queryParameters['city']}-${context.request.uri.queryParameters['addr'] ?? ''}-${context.request.uri.queryParameters['provider'] ?? ''}".toLowerCase().trim().hashCode}';
   var box = Hive.box("hotel");
   if (box.containsKey(hashid)) {
     print("using cache $hashid");
@@ -360,6 +360,7 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
             "query": HOTEL,
             "match": HOTEL.toLowerCase().similarityTo(HOTEL_NAME.toLowerCase()),
             "provider": PROVIDER.toString(),
+            "hotel_url": HOTEL_URL
           }
         };
       } else {
