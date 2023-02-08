@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dio/dio.dart' as io;
+import 'package:hive/hive.dart';
 import 'package:string_similarity/string_similarity.dart';
 
 Future<Response> onRequest(RequestContext context) async {
@@ -13,6 +14,13 @@ Future<Response> onRequest(RequestContext context) async {
   }
   if (!context.request.uri.queryParameters.containsKey("city")) {
     return Response.json(body: {"success": false, "msg": "required parameter: city"});
+  }
+  var hashid =
+      '${"${context.request.uri.queryParameters['hotel']}-${context.request.uri.queryParameters['city']}-${context.request.uri.queryParameters['addr'] ?? ''}".toLowerCase().trim().hashCode}';
+  var box = Hive.box("hotel");
+  if (box.containsKey(hashid)) {
+    print("using cache $hashid");
+    return Response.json(body: json.decode("${box.get(hashid)}"));
   }
 
   // if (!context.request.uri.queryParameters.containsKey("addr")) {
@@ -38,18 +46,20 @@ Future<Response> onRequest(RequestContext context) async {
         context.request.uri.queryParameters['addr'] ?? '',
       );
       if (det['success'] as bool) {
+        box.put(hashid, json.encode(det));
         return Response.json(body: det);
       }
     }
     Response.json(body: {"success": false, "msg": "not found.."});
   } else {
-    return Response.json(
-        body: await getHotelDetail(
+    var r = await getHotelDetail(
       prov["${context.request.uri.queryParameters['provider']}"]!,
       context.request.uri.queryParameters['hotel']!,
       context.request.uri.queryParameters['city']!,
       context.request.uri.queryParameters['addr'] ?? '',
-    ));
+    );
+    box.put(hashid, json.encode(r));
+    return Response.json(body: r);
   }
   return Response.json(body: {"success": false, "msg": "not found,"});
 }
