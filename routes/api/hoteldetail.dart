@@ -134,8 +134,8 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
                 "name": "${HOTEL_DATA['hotelBaseData']['baseInfo']['hotelNameLocale']}",
                 "rating": HOTEL_DATA['hotelBaseData']['baseInfo']['star'],
                 "desc": "${HOTEL_DATA['staticHotelInfo']['hotelInfo']['basic']['description']}",
-                "sort_desc": "${HOTEL_DATA['staticHotelInfo']['hotelInfo']['basic']['description']}",
-                "thumb": "https://${HOTEL_DATA['staticHotelInfo']['hotelInfo']['basic']['image'][0]}",
+                "sort_desc": "",
+                "thumb": "https:${HOTEL_DATA['staticHotelInfo']['hotelInfo']['basic']['image'][0]}",
                 "addr": {
                   "city": "${HOTEL_DATA['hotelBaseData']['baseInfo']['cityName']}",
                   "country": "",
@@ -152,7 +152,7 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
                           "distanceTxt": ee['subTitle'],
                           "lat": double.parse("${ee['lat']}"),
                           "lng": double.parse("${ee['lng']}"),
-                          "photo": "https://${ee['imgUrl']}"
+                          "photo": ee['imgUrl'] == null ? '' : "https:${ee['imgUrl']}"
                         }))
                     .toList(),
                 "photos": (HOTEL_DATA['hotelBaseData']['hotelImg']['imgUrlList'] as List<dynamic>)
