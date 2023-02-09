@@ -1,0 +1,366 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "3:1859276628501029853",
+      "lastPropertyId": "10:971007782634851254",
+      "name": "HotelItem",
+      "properties": [
+        {
+          "id": "1:6667698192371479562",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:159190294373967214",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:401138741798090858",
+          "name": "rating",
+          "type": 6
+        },
+        {
+          "id": "4:1232605311322191840",
+          "name": "desc",
+          "type": 9
+        },
+        {
+          "id": "5:2144936782726059330",
+          "name": "sortDesc",
+          "type": 9
+        },
+        {
+          "id": "6:3416742665924727092",
+          "name": "thumb",
+          "type": 9
+        },
+        {
+          "id": "8:8384093605740829402",
+          "name": "addrId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "3:6677786831141962872",
+          "relationTarget": "Addr"
+        }
+      ],
+      "relations": [
+        {
+          "id": "2:8012960106238637345",
+          "name": "poi",
+          "targetId": "8:5550286605932369806"
+        },
+        {
+          "id": "3:2977224567826835103",
+          "name": "photos",
+          "targetId": "7:7671382216505008225"
+        },
+        {
+          "id": "4:3292537616858224328",
+          "name": "facilities",
+          "targetId": "5:1198847496790854644"
+        }
+      ]
+    },
+    {
+      "id": "4:2115486077563963911",
+      "lastPropertyId": "7:2077282872703364535",
+      "name": "Addr",
+      "properties": [
+        {
+          "id": "1:5544080766007093190",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:5950273531271264740",
+          "name": "city",
+          "type": 9
+        },
+        {
+          "id": "3:1753962088179840735",
+          "name": "country",
+          "type": 9
+        },
+        {
+          "id": "4:4279828917559007119",
+          "name": "area",
+          "type": 9
+        },
+        {
+          "id": "5:3939286881271549499",
+          "name": "addr",
+          "type": 9
+        },
+        {
+          "id": "6:3511812552224525696",
+          "name": "lat",
+          "type": 8
+        },
+        {
+          "id": "7:2077282872703364535",
+          "name": "lng",
+          "type": 8
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "5:1198847496790854644",
+      "lastPropertyId": "4:7910026873419325445",
+      "name": "HotelFacilities",
+      "properties": [
+        {
+          "id": "1:470131409520638606",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:383828122932684997",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "3:2152092500544077280",
+          "name": "ic",
+          "type": 9
+        }
+      ],
+      "relations": [
+        {
+          "id": "1:4595304211603645924",
+          "name": "features",
+          "targetId": "6:3655609845702813919"
+        }
+      ]
+    },
+    {
+      "id": "6:3655609845702813919",
+      "lastPropertyId": "4:8208698784266063522",
+      "name": "HotelFeatures",
+      "properties": [
+        {
+          "id": "1:8925689338490210193",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2688930375665099472",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:6165976580832557342",
+          "name": "ic",
+          "type": 9
+        },
+        {
+          "id": "4:8208698784266063522",
+          "name": "photo",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "7:7671382216505008225",
+      "lastPropertyId": "4:7609698148738899227",
+      "name": "HotelPhotos",
+      "properties": [
+        {
+          "id": "1:5389282405779182109",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7528918973252921319",
+          "name": "cat",
+          "type": 9
+        },
+        {
+          "id": "3:7031489866624941401",
+          "name": "desc",
+          "type": 9
+        },
+        {
+          "id": "4:7609698148738899227",
+          "name": "url",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "8:5550286605932369806",
+      "lastPropertyId": "8:9068632798349663182",
+      "name": "HotelPoi",
+      "properties": [
+        {
+          "id": "1:7004748734045410067",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3878379966520596810",
+          "name": "cat",
+          "type": 9
+        },
+        {
+          "id": "3:4330648007657726239",
+          "name": "ic",
+          "type": 9
+        },
+        {
+          "id": "4:454563600913629058",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "5:406779750169174773",
+          "name": "distanceTxt",
+          "type": 9
+        },
+        {
+          "id": "6:4145996759548207856",
+          "name": "lat",
+          "type": 8
+        },
+        {
+          "id": "7:7338346512388800260",
+          "name": "lng",
+          "type": 8
+        },
+        {
+          "id": "8:9068632798349663182",
+          "name": "photo",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "9:5003477913178925923",
+      "lastPropertyId": "6:899622552330372505",
+      "name": "HotelResultStatus",
+      "properties": [
+        {
+          "id": "1:1470756687578539100",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2392681665496882140",
+          "name": "hotelName",
+          "type": 9
+        },
+        {
+          "id": "3:4223731109395376504",
+          "name": "query",
+          "type": 9
+        },
+        {
+          "id": "4:5470883075461302127",
+          "name": "match",
+          "type": 8
+        },
+        {
+          "id": "5:887868674357943182",
+          "name": "provider",
+          "type": 9
+        },
+        {
+          "id": "6:899622552330372505",
+          "name": "hotelUrl",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "10:3752808697029403766",
+      "lastPropertyId": "6:79020633066067295",
+      "name": "HotelCache",
+      "properties": [
+        {
+          "id": "1:2893884737306983626",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:8007951635937899941",
+          "name": "externalId",
+          "type": 9
+        },
+        {
+          "id": "3:5634669324627413361",
+          "name": "hashId",
+          "type": 9
+        },
+        {
+          "id": "4:6659074276410576809",
+          "name": "date",
+          "type": 10
+        },
+        {
+          "id": "5:4441571757456398804",
+          "name": "hotelId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "7:1430721674788404726",
+          "relationTarget": "HotelItem"
+        },
+        {
+          "id": "6:79020633066067295",
+          "name": "statusId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "8:3688654935594000214",
+          "relationTarget": "HotelResultStatus"
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "10:3752808697029403766",
+  "lastIndexId": "8:3688654935594000214",
+  "lastRelationId": "4:3292537616858224328",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [
+    4849918615804789240,
+    6223986000624450662
+  ],
+  "retiredIndexUids": [
+    5656580841897852978,
+    8604783963956355879,
+    3768560204161510699,
+    940827908777642924
+  ],
+  "retiredPropertyUids": [
+    48618471413708497,
+    3221401926039043752,
+    5527456897881110175,
+    701663028820440322,
+    7229299519982563449,
+    6699336494652198226,
+    3512629331388371847,
+    7910026873419325445,
+    6672334475439514665,
+    7032341756579836860,
+    971007782634851254
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}
