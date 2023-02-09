@@ -4,8 +4,12 @@ import 'dart:typed_data';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dio/dio.dart' as io;
-import 'package:hive/hive.dart';
+import 'package:hoteldetail_dart/models.dart';
+import 'package:hoteldetail_dart/objectbox.g.dart';
+import 'package:objectbox/objectbox.dart';
 import 'package:string_similarity/string_similarity.dart';
+
+import '../../main.dart';
 
 Future<Response> onRequest(RequestContext context) async {
   // if (!context.request.uri.queryParameters.containsKey("provider")) {
@@ -17,14 +21,21 @@ Future<Response> onRequest(RequestContext context) async {
   if (!context.request.uri.queryParameters.containsKey("city")) {
     return Response.json(body: {"success": false, "msg": "required parameter: city"});
   }
+  var extid = context.request.uri.queryParameters['id'] ?? '';
   var hashid =
       '${"${context.request.uri.queryParameters['hotel']}-${context.request.uri.queryParameters['city']}-${context.request.uri.queryParameters['addr'] ?? ''}-${context.request.uri.queryParameters['provider'] ?? ''}".toLowerCase().trim().hashCode}';
-  var box = Hive.box("hotel");
-  // if (box.containsKey(hashid)) {
-  //   print("using cache $hashid");
-  //   return Response.json(body: json.decode("${box.get(hashid)}"));
-  // }
-
+  final hotelBox = store.box<HotelCache>();
+  print("query existing hotel...");
+  var queryhotel = hotelBox.query(HotelCache_.hashId.equals(hashid)).build();
+  if (extid.isNotEmpty)
+    queryhotel =
+        hotelBox.query(HotelCache_.externalId.equals(extid + (context.request.uri.queryParameters['provider'] ?? ''))).build();
+  if (queryhotel.count() > 0) {
+    print("using cache $hashid");
+    var data = queryhotel.findFirst();
+    return Response.json(body: {"status": true, "data": data!.hotel.target, "status": data.status.target});
+  }
+  print("query done...");
   // if (!context.request.uri.queryParameters.containsKey("addr")) {
   //   return Response.json(body: {"success": false, "msg": "required parameter: addr"});
   // }
@@ -40,7 +51,9 @@ Future<Response> onRequest(RequestContext context) async {
       !prov.keys.contains(context.request.uri.queryParameters['provider'])) {
     return Response.json(body: {"success": false, "msg": "invalid provider"});
   }
+  print("check provider exists...");
   if (!context.request.uri.queryParameters.containsKey("provider")) {
+    print("provider not exists, iterating...");
     for (final p in [HotelProvider.trvlk, HotelProvider.agoda, HotelProvider.tiket, HotelProvider.expedia, HotelProvider.trip]) {
       var det = await getHotelDetail(
         p,
@@ -49,20 +62,35 @@ Future<Response> onRequest(RequestContext context) async {
         context.request.uri.queryParameters['addr'] ?? '',
       );
       if (det['success'] as bool) {
-        box.put(hashid, json.encode(det));
+        print("put data");
+        hotelBox.put(HotelCache(
+            ToOne(target: HotelItem.fromJson(Map<String, dynamic>.from(det['data'] as Map<dynamic, dynamic>))),
+            ToOne(target: HotelResultStatus.fromJson(Map<String, dynamic>.from(det['status'] as Map<dynamic, dynamic>))),
+            hashid,
+            date: DateTime.now(),
+            externalId: extid.isNotEmpty ? (extid + (context.request.uri.queryParameters['provider'] ?? "")) : ''));
         return Response.json(body: det);
       }
     }
     Response.json(body: {"success": false, "msg": "not found.."});
   } else {
+    print("provider exists...");
     var r = await getHotelDetail(
       prov["${context.request.uri.queryParameters['provider']}"]!,
       context.request.uri.queryParameters['hotel']!,
       context.request.uri.queryParameters['city']!,
       context.request.uri.queryParameters['addr'] ?? '',
     );
-    box.put(hashid, json.encode(r));
-    return Response.json(body: r);
+    if (r['success'] as bool) {
+      print("put data");
+      hotelBox.put(HotelCache(ToOne(target: HotelItem.fromJson(Map<String, dynamic>.from(r['data'] as Map<dynamic, dynamic>))),
+          ToOne(target: HotelResultStatus.fromJson(Map<String, dynamic>.from(r['status'] as Map<dynamic, dynamic>))), hashid,
+          date: DateTime.now(),
+          externalId: extid.isNotEmpty ? (extid + (context.request.uri.queryParameters['provider'] ?? "")) : ''));
+      return Response.json(body: r);
+    } else {
+      Response.json(body: {"success": false, "msg": "not found.."});
+    }
   }
   return Response.json(body: {"success": false, "msg": "not found,"});
 }
@@ -128,18 +156,22 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
         case HotelProvider.trip:
           HOTEL_URL = HOTEL_URL.replaceAll("www.trip.com", "id.trip.com");
           try {
+            print("--- get hotel source...");
             var r = await http.get(HOTEL_URL);
             if ("${r.data}".contains("hotelBaseData")) {
+              print("--- parsing phase 1...");
               var jj = json.decode(("${r.data}".split("window.IBU_HOTEL =")[1].split("__webpack_public_path__=")[0]).trim());
               var mydata = {
                 "hotelBaseData": jj["initData"]["hotelBaseData"],
                 "hotelFacilityPop": jj["initData"]["hotelFacilityPop"],
                 "staticHotelInfo": jj["initData"]["staticHotelInfo"]
               };
+              print("--- parsing phase 2...");
               var res = await io.Dio().post("https://www.trip.com/restapi/soa2/16708/json/detailMap",
                   data: {"masterHotelId": jj["initData"]["masterHotelId"]});
               HOTEL_NAME = "${mydata["hotelBaseData"]["baseInfo"]["hotelNameLocale"]}";
               HOTEL_DATA = mydata;
+              print("--- parsing phase 3...");
               HOTEL_DATA_PARSED = {
                 "name": "${HOTEL_DATA['hotelBaseData']['baseInfo']['hotelNameLocale']}",
                 "rating": HOTEL_DATA['hotelBaseData']['baseInfo']['star'],
@@ -182,8 +214,13 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
                         })
                     .toList()
               };
+              print("--- parsing done...");
+            } else {
+              print("--- criteria not found... $HOTEL_URL");
+              //File("notexists.txt").writeAsStringSync("${r.data}");
             }
           } catch (ee) {
+            print("--- error parsing...");
             _errMsg = "$ee";
           }
           break;
@@ -436,9 +473,8 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
           break;
         default:
       }
-      if (HOTEL_NAME.isNotEmpty) {
+      if (HOTEL_NAME.isNotEmpty && HOTEL_DATA_PARSED.keys.isNotEmpty) {
         // File("outx_$PROVIDER.json").writeAsStringSync(json.encode(HOTEL_DATA_PARSED));
-        // print(HOTEL_NAME);
         return {
           "success": true,
           "data": HOTEL_DATA_PARSED,
