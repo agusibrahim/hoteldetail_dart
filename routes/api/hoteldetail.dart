@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dio/dio.dart' as io;
@@ -18,10 +20,10 @@ Future<Response> onRequest(RequestContext context) async {
   var hashid =
       '${"${context.request.uri.queryParameters['hotel']}-${context.request.uri.queryParameters['city']}-${context.request.uri.queryParameters['addr'] ?? ''}-${context.request.uri.queryParameters['provider'] ?? ''}".toLowerCase().trim().hashCode}';
   var box = Hive.box("hotel");
-  if (box.containsKey(hashid)) {
-    print("using cache $hashid");
-    return Response.json(body: json.decode("${box.get(hashid)}"));
-  }
+  // if (box.containsKey(hashid)) {
+  //   print("using cache $hashid");
+  //   return Response.json(body: json.decode("${box.get(hashid)}"));
+  // }
 
   // if (!context.request.uri.queryParameters.containsKey("addr")) {
   //   return Response.json(body: {"success": false, "msg": "required parameter: addr"});
@@ -30,7 +32,8 @@ Future<Response> onRequest(RequestContext context) async {
     "trvlk": HotelProvider.trvlk,
     "tiket": HotelProvider.tiket,
     "agoda": HotelProvider.agoda,
-    "trip": HotelProvider.trip
+    "trip": HotelProvider.trip,
+    "expedia": HotelProvider.expedia
   };
 
   if (context.request.uri.queryParameters.containsKey("provider") &&
@@ -38,7 +41,7 @@ Future<Response> onRequest(RequestContext context) async {
     return Response.json(body: {"success": false, "msg": "invalid provider"});
   }
   if (!context.request.uri.queryParameters.containsKey("provider")) {
-    for (final p in [HotelProvider.trvlk, HotelProvider.agoda, HotelProvider.tiket, HotelProvider.trip]) {
+    for (final p in [HotelProvider.trvlk, HotelProvider.agoda, HotelProvider.tiket, HotelProvider.expedia, HotelProvider.trip]) {
       var det = await getHotelDetail(
         p,
         context.request.uri.queryParameters['hotel']!,
@@ -92,6 +95,10 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
       SITE = "agoda.com";
       SITE_URL_FILTER = RegExp(r"/id-id/.*-id\.html");
       break;
+    case HotelProvider.expedia:
+      SITE = "expedia.co.id";
+      SITE_URL_FILTER = RegExp(r"expedia.co.id/.*h\d+.Hotel-Information");
+      break;
     default:
   }
 //  var HOTEL = "le eminence puncak";
@@ -103,12 +110,15 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
         "https://links.duckduckgo.com/d.js?q=${Uri.encodeComponent(QUERY)}&vqd=${fqd.group(1)}&kl=id-id&l=en-us&dl=en&ct=ID&sp=1&df=a&ss_mkt=id&s=0&bpa=1&biaexp=b&msvrtexp=b&nadse=b&eclsexp=b&tjsexp=b");
     if (!"${sr.data}".contains("DDG.deep.is506")) {
       var data = json.decode(SEARCH_REGEX.firstMatch("${sr.data}")?.group(1) ?? "[]") as List<dynamic>;
-      data = data.where((e) => SITE_URL_FILTER.hasMatch("${e['u']}")).toList();
+      data = data
+          .where((e) =>
+              SITE_URL_FILTER.hasMatch("${e['u']}") && !"${e['u']}".contains("/area/") && !"${e['u']}".contains("/landmark/"))
+          .toList();
       // for (var e in data) {
       //   print(e['u']);
       // }
       if (data.isEmpty) return {"success": false, "msg": "not found"};
-      ;
+
       var HOTEL_URL = "${data.first['u']}";
       dynamic HOTEL_DATA = {};
       var HOTEL_NAME = "";
@@ -295,7 +305,9 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
         case HotelProvider.trvlk:
           try {
             var r = await http.get(HOTEL_URL);
+            //print("trvl url: $HOTEL_URL");
             var dd = json.decode("${r.data}".split("window.staticProps = ")[1].split(";\n")[0]);
+            //File("outx_test.json").writeAsStringSync(json.encode(dd));
             HOTEL_NAME = "${dd['hotelDetailData']['name']}";
             HOTEL_DATA = dd['hotelDetailData'];
             HOTEL_DATA_PARSED = {
@@ -347,6 +359,81 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
             _errMsg = "$ee";
           }
           break;
+        case HotelProvider.expedia:
+          //print("exp: $HOTEL_URL");
+          var r = await http.get(HOTEL_URL);
+
+          var rr = '{"__typename' +
+              ("${r.data}"
+                      .split("<script>")[1]
+                      .split(RegExp(r'\\"PropertyInfo:\d+\\":{\\"__typename'))[1]
+                      .split('},\\"clientInfo\\"')[0]
+                      .split(',\\"InlineNotification')[0]
+                      .replaceAll('\\\\\\"', '\''))
+                  .replaceAll('\\"', '"')
+                  .replaceAll('\\u002F', "/");
+          //File("outx_test.json").writeAsStringSync(rr);
+          var data = json.decode(rr) as Map<String, dynamic>;
+          var d = {};
+          data.forEach((key, value) {
+            d[key.contains("(") ? key.split('(')[0] : key] = value;
+          });
+          HOTEL_DATA = d;
+          HOTEL_NAME = "${d['summary']['name']}";
+          var amanitiesKey = (HOTEL_DATA['summary'] as Map<String, dynamic>).keys.firstWhere((e) => "$e".startsWith("amenities"));
+          var fcontent = (HOTEL_DATA['summary'][amanitiesKey]['amenities'] as List<dynamic>)
+              .expand((e) => e['contents'] as List<dynamic>)
+              .toList();
+          fcontent.addAll(HOTEL_DATA['summary'][amanitiesKey]['takeover']['highlight'] as List<dynamic>);
+          fcontent.addAll(HOTEL_DATA['summary'][amanitiesKey]['takeover']['property'] as List<dynamic>);
+          //print(fcontent);
+          HOTEL_DATA_PARSED = {
+            "name": "${d['summary']['name']}",
+            "rating": double.parse("${HOTEL_DATA['summary']['overview']['starRating']}"),
+            "desc": removeAllHtmlTags(
+                "${(HOTEL_DATA['summary']['location']['whatsAround']['editorial']['content'] as List<dynamic>).join('\n. ')}"),
+            "sort_desc": '',
+            "thumb": HOTEL_DATA['propertyGallery']['images'][0]['image']['url'],
+            "addr": {
+              "city": "${HOTEL_DATA['summary']['location']['address']['city']}",
+              "country": "${HOTEL_DATA['summary']['location']['address']['countryCode']}",
+              "area": "${HOTEL_DATA['summary']['location']['address']['province']}",
+              "addr": "${HOTEL_DATA['summary']['location']['address']['firstAddressLine']}",
+              "lat": double.parse("${HOTEL_DATA['summary']['location']['coordinates']['latitude']}"),
+              "lng": double.parse("${HOTEL_DATA['summary']['location']['coordinates']['longitude']}")
+            },
+            "poi": (HOTEL_DATA['summary']['location']['whatsAround']['nearbyPOIs'] as List<dynamic>)
+                .expand((e) => (e['items'] as List<dynamic>).map((ee) => {
+                      "cat": ee['__typename'],
+                      "ic": ee['icon'] != null ? ee['icon']['place'] : '',
+                      "name": ee['text'],
+                      "distanceTxt": "${ee['moreInfo']}",
+                      "lat": 0,
+                      "lng": 0,
+                      "photo": ""
+                    }))
+                .toList(),
+            "photos": (HOTEL_DATA['propertyGallery']['categories'] as List<dynamic>)
+                .expand((e) =>
+                    (e['images'] as List<dynamic>).map((ee) => {"cat": e['name'], "desc": ee['alt'], "url": ee['image']['url']}))
+                .toList(),
+            "facilities": fcontent
+                .map((e) => {
+                      "title": e['heading'] ?? e['header']['text'],
+                      "ic": '',
+                      "features": e['items']
+                          .map((ee) => {
+                                "name": ee['text'],
+                                "ic": e['icon'] != null ? e['icon']['id'] : '',
+                                "photo": '',
+                              })
+                          .toList()
+                    })
+                .toList()
+          };
+          // File("outx_test.json").writeAsStringSync(rr);
+          // print(json.decode(rr));
+          break;
         default:
       }
       if (HOTEL_NAME.isNotEmpty) {
@@ -375,7 +462,7 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
   }
 }
 
-enum HotelProvider { trip, tiket, trvlk, agoda }
+enum HotelProvider { trip, tiket, trvlk, agoda, expedia }
 
 String removeAllHtmlTags(String htmlText) {
   RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
