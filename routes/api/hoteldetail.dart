@@ -96,13 +96,13 @@ Future<Response> onRequest(RequestContext context) async {
 }
 
 Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city, String addr) async {
-  var VQD_REGEX = RegExp(r"vqd='(\d+-\d+-\d+)");
+  var VQD_REGEX = RegExp(r"vqd='(\d+-\d+(-\d+)?)");
   var SEARCH_REGEX = RegExp(r"DDG\.pageLayout\.load\('d',(\[.+\])\);DDG\.duckbar\.load\('images'");
   var UA =
       'Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36';
   var http = io.Dio(io.BaseOptions(headers: {
     "User-Agent": UA,
-    "Accept-Language": "id-id",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6,zh-CN;q=0.5,zh;q=0.4",
   }));
   var SITE = "trip.com";
   var SITE_URL_FILTER = RegExp(r"www.trip.com");
@@ -133,6 +133,8 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
   var QUERY = "site:$SITE hotel $HOTEL di $city jalan $addr";
   var html = await io.Dio().get("https://duckduckgo.com/?q=${Uri.encodeComponent(QUERY)}&ia=web");
   var fqd = VQD_REGEX.firstMatch("${html.data}");
+  print("fqd: $fqd");
+  print(html);
   if (fqd != null) {
     var sr = await io.Dio().get(
         "https://links.duckduckgo.com/d.js?q=${Uri.encodeComponent(QUERY)}&vqd=${fqd.group(1)}&kl=id-id&l=en-us&dl=en&ct=ID&sp=1&df=a&ss_mkt=id&s=0&bpa=1&biaexp=b&msvrtexp=b&nadse=b&eclsexp=b&tjsexp=b");
@@ -350,9 +352,14 @@ Future<dynamic> getHotelDetail(HotelProvider PROVIDER, String HOTEL, String city
             HOTEL_DATA_PARSED = {
               "name": "${HOTEL_DATA['name']}",
               "rating": double.parse("${HOTEL_DATA['starRating']}").toInt(),
-              "desc": removeAllHtmlTags("${HOTEL_DATA['attribute']['description']}").replaceAll("\n", "").replaceAll("\n\n", " "),
-              "sort_desc":
-                  removeAllHtmlTags("${HOTEL_DATA['attribute']['overview']}").replaceAll("\n", "").replaceAll("\n\n", " "),
+              "desc": "${HOTEL_DATA['attribute']['description']}"
+                  .replaceAll("\n", "")
+                  .replaceAll("\n\n", " ")
+                  .replaceAll(RegExp(r"^Location"), ""),
+              "sort_desc": removeAllHtmlTags("${HOTEL_DATA['attribute']['overview']}")
+                  .replaceAll("\n", "")
+                  .replaceAll("\n\n", " ")
+                  .replaceAll(RegExp(r"^Location"), ""),
               "thumb": (HOTEL_DATA['assets'] as List<dynamic>).isNotEmpty
                   ? "${(HOTEL_DATA['assets'] as List<dynamic>).first['url']}"
                   : "",
